@@ -1,0 +1,50 @@
+---
+  - name: Install Consul on our Web Server
+    hosts: all
+    roles:
+    - singleplatform-eng.users 
+
+
+    vars:
+      consul_version: 1.10.1
+      consul_server_ip: 18.193.120.157
+      consul_config_dir: /etc/systemd/system/consul.d
+
+    tasks:
+  
+      # - name: Install unzip
+      #   apt: name=unzip state=present
+      #   become: true
+
+      - name: Install Consul
+        become: true
+        unarchive:
+          src: https://releases.hashicorp.com/consul/{{ consul_version }}/consul_{{ consul_version }}_linux_amd64.zip
+          remote_src: yes
+          dest: /bin
+          creates: /bin/consul
+          mode: 0555
+
+      - name: Make Consul a service
+        become: true
+        copy: 
+          src: consul.service
+          dest: /etc/systemd/system/consul.service 
+    
+      - name: Ensure config directory exists
+        become: true
+        file: 
+          path: "{{ consul_config_dir }}"
+          state: directory
+    
+      - name: Deploy consul config
+        become: true
+        template: 
+          src: init.json.j2
+          dest: "{{consul_config_dir}}/init.json"
+    
+      - name: Ensure consul's running
+        become: true
+        service: name=consul state=started
+
+      
